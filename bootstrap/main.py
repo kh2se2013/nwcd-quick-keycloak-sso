@@ -121,6 +121,16 @@ for c in clients:
 if not client_uuid:
     print("[ERROR] SAML Client 'urn:amazon:webservices' 未找到")
 else:
+    # 移除 role_list Client Scope
+    default_scopes = admin.get_client_default_client_scopes(client_uuid)
+    for scope in default_scopes:
+        if scope["name"] == "role_list":
+            admin.delete_client_default_client_scope(client_uuid, scope["id"])
+            print("[OK] Client Scope 'role_list' 已移除")
+            break
+    else:
+        print("[SKIP] Client Scope 'role_list' 已不存在")
+
     # 4.1 创建 Client Roles
     roles = [
         {"name": QUICK_ADMIN_PRO_ROLE, "description": "Quick Admin Pro"},
@@ -193,6 +203,7 @@ else:
                 print(f"[SKIP] Mapper '{mapper['name']}' 已存在")
             else:
                 print(f"[ERROR] Mapper '{mapper['name']}' 失败: {e}")
+
 
     # 步骤 5：创建 Groups 并绑定 Client Roles
     groups = [
