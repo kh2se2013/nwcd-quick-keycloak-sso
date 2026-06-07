@@ -1,0 +1,435 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon Quick SSO with Keycloak
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Infrastructure
+        Parameters:
+          - VpcId
+          - PublicSubnet1
+          - PublicSubnet2
+          - InstanceType
+          - KeyPairName
+      - Label:
+          default: Keycloak
+        Parameters:
+          - KeycloakDomain
+          - KeycloakAdminUsername
+          - KeycloakAdminPassword
+      - Label:
+          default: PostgreSQL
+        Parameters:
+          - PostgresUser
+          - PostgresPassword
+
+Parameters:
+  # Infrastructure
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public Subnet 1 (ALB + EC2)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public Subnet 2 (ALB requires 2 AZs)
+
+  InstanceType:
+    Type: String
+    Default: t4g.medium
+    AllowedValues:
+      - t4g.medium
+    Description: EC2 instance type
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 Key Pair for SSH access
+
+  # Keycloak
+  KeycloakDomain:
+    Type: String
+    Default: sso.example.com
+    Description: Keycloak domain name
+
+  KeycloakAdminUsername:
+    Type: String
+    Default: admin
+    Description: Keycloak bootstrap admin username
+
+  KeycloakAdminPassword:
+    Type: String
+    NoEcho: true
+    Default: admin
+    Description: Keycloak bootstrap admin password
+
+  # PostgreSQL
+  PostgresUser:
+    Type: String
+    Default: keycloak
+    Description: PostgreSQL username
+
+  PostgresPassword:
+    Type: String
+    NoEcho: true
+    Default: keycloak
+    Description: PostgreSQL password
+
+Resources:
+
+  # Security Groups
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB Security Group - HTTPS from internet
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Retain
+    Properties:
+      GroupDescription: EC2 Security Group - from ALB + SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+
+  # ACM Certificate
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref KeycloakDomain
+      ValidationMethod: DNS
+
+  # ALB
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckPath: /health/ready
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Targets:
+        - Id: !Ref EC2Instance
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref Certificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # EC2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: Retain
+    Properties:
+      DisableApiTermination: true
+      InstanceType: !Ref InstanceType
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      CreditSpecification:
+        CPUCredits: standard
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 16
+            VolumeType: gp3
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+
+          # Install Docker
+          dnf update -y
+          dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+
+          # Install Docker Compose plugin
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+          # Clone repository
+          dnf install -y git
+          git clone https://github.com/kh2se2013/quick-keycloak-sso.git /opt/keycloak
+          cd /opt/keycloak/docker
+
+          # Create .env from parameters
+          cat > .env << EOF
+          POSTGRES_USER=${PostgresUser}
+          POSTGRES_PASSWORD=${PostgresPassword}
+          POSTGRES_DB=keycloak
+
+          KC_BOOTSTRAP_ADMIN_USERNAME=${KeycloakAdminUsername}
+          KC_BOOTSTRAP_ADMIN_PASSWORD=${KeycloakAdminPassword}
+          KC_DB_URL_HOST=host.docker.internal
+          KC_HOSTNAME=${KeycloakDomain}
+          EOF
+
+          # Start services
+          docker compose -f compose.postgres.yaml up -d
+          docker compose -f compose.keycloak.yaml up -d
+
+          # Create bootstrap .env
+          cd /opt/keycloak/bootstrap
+          cat > .env << EOF
+          # Keycloak 连接
+          KEYCLOAK_SERVER_URL=http://localhost:8080
+          KEYCLOAK_MASTER_ADMIN_USERNAME=
+          KEYCLOAK_MASTER_ADMIN_PASSWORD=
+
+          # Realm（默认 quick）
+          KEYCLOAK_QUICK_REALM=quick
+
+          # Quick 管理员用户
+          KEYCLOAK_QUICK_ADMIN_USERNAME=
+          KEYCLOAK_QUICK_ADMIN_PASSWORD=
+          KEYCLOAK_QUICK_ADMIN_EMAIL=
+
+          # Amazon Quick 账户
+          QUICK_ACCOUNT_NAME=
+
+          # AWS 账户
+          AWS_ACCOUNT_ID=${AWS::AccountId}
+
+          # SAML Mapper 配置
+          MAPPER_SESSION_DURATION_VALUE=43200
+          EOF
+
+  # IAM Roles
+  QuickAdminProRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickAdminProRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateAdmin
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+  QuickAuthorProRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickAuthorProRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateUser
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+  QuickReaderProRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickReaderProRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateReader
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+  QuickAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickAdminRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateAdmin
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+  QuickAuthorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickAuthorRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateUser
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+  QuickReaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: QuickReaderRole
+      MaxSessionDuration: 43200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
+            Action:
+              - sts:AssumeRoleWithSAML
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml
+      Policies:
+        - PolicyName: QuickSightAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: quicksight:CreateReader
+                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
+
+Outputs:
+  Step10DNS:
+    Description: "Configure DNS - Add CNAME record pointing your domain to this ALB DNS name"
+    Value: !GetAtt LoadBalancer.DNSName
+
+  Step20Admin:
+    Description: "Configure Keycloak admin - Create a permanent admin account and delete the temporary one"
+    Value: !Sub "https://${KeycloakDomain}"
+
+  Step30Bootstrap:
+    Description: "Configure Keycloak - Edit .env and run main.py in /opt/keycloak/bootstrap/"
+    Value: !Sub "ssh ec2-user@${EC2Instance.PublicIp}"
+
+  Step40SAMLProvider:
+    Description: "Configure AWS IAM - Download SAML Metadata and create SAML Provider"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick/protocol/saml/descriptor"
+
+  Step51IdPURL:
+    Description: "Configure Quick SSO - IdP URL"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick/protocol/saml/clients/aws"
+
+  Step52Redirect:
+    Description: "Configure Quick SSO - IdP redirect URL parameter"
+    Value: "RelayState"
+
+  Step61IssuerURL:
+    Description: "Configure Quick Desktop - Issuer URL"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick"
+
+  Step62AuthEndpoint:
+    Description: "Configure Quick Desktop - Authorization Endpoint"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick/protocol/openid-connect/auth"
+
+  Step63TokenEndpoint:
+    Description: "Configure Quick Desktop - Token Endpoint"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick/protocol/openid-connect/token"
+
+  Step64JWKSURI:
+    Description: "Configure Quick Desktop - JWKS URI"
+    Value: !Sub "https://${KeycloakDomain}/realms/quick/protocol/openid-connect/certs"
+
+  Step65ClientID:
+    Description: "Configure Quick Desktop - Client ID"
+    Value: "amazon-quick-desktop"
