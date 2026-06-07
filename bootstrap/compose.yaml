@@ -1,0 +1,9 @@
+services:
+
+  bootstrap:
+    image: python:3.14
+    network_mode: host
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt && python main.py"
+    volumes:
+      - .:/app
