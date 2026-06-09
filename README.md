@@ -117,3 +117,91 @@ Quick 中的用户名就是 IAM 联合用户名称，格式为 `角色名/邮箱
 
 - 如果用户从未登录过 Quick（包括 Web 端），首次 SSO 登录会自动创建用户并停留在 Web 端
 - 再次点击 Desktop 的 SSO 登录及后续登录，跳转正常
+
+---
+
+## 三、常用操作
+
+### 1.【管理员】批量创建用户
+
+通过导入 `keycloak-user-create` Skill，上传用户清单即可自动完成创建用户、分配角色、发送邀请邮件。
+
+#### 前置条件
+
+在 Amazon Quick Desktop 中完成以下配置：
+
+**1. keycloak-mcp-server**
+
+Keycloak 管理 MCP Server，支持用户、组、角色、Client 等 80+ 操作。
+
+参考：https://github.com/M0-AR/keycloak-mcp-server
+
+设置 → 连接 → MCP Server → 添加：
+
+```json
+{
+  "sso.example.com": {
+    "command": "npx",
+    "args": ["keycloak-mcp-server"],
+    "env": {
+      "KEYCLOAK_URL": "https://sso.example.com",
+      "KEYCLOAK_ADMIN": "admin",
+      "KEYCLOAK_ADMIN_PASSWORD": "changeme"
+    }
+  }
+}
+```
+
+**2. mcp-email-server**
+
+IMAP / SMTP 邮件收发 MCP Server，支持收件、发件、附件等操作。
+
+参考：https://github.com/ai-zerolab/mcp-email-server
+
+设置 → 连接 → MCP Server → 添加：
+
+```json
+{
+  "admin@example.com": {
+    "command": "uvx",
+    "args": ["mcp-email-server@latest", "stdio"],
+    "env": {
+      "MCP_EMAIL_SERVER_EMAIL_ADDRESS": "admin@example.com",
+      "MCP_EMAIL_SERVER_PASSWORD": "changeme",
+      "MCP_EMAIL_SERVER_IMAP_HOST": "imap.example.com",
+      "MCP_EMAIL_SERVER_SMTP_HOST": "smtp.example.com"
+    }
+  }
+}
+```
+
+**3. keycloak-user-create Skill**
+
+支持单个或批量的创建 Keycloak 用户并发送邀请邮件的自动化流程。
+
+设置 → 技能 → 导入，选择本仓库 `skills/keycloak-user-create/` 文件夹。
+
+#### 操作步骤
+
+1. 准备用户清单，CSV 或 Excel 格式，至少包含"邮件"和"角色"两列：
+
+```csv
+邮件,角色
+alice@example.com,管理员专业版
+bob@example.com,作者专业版
+carol@example.com,读者专业版
+```
+
+2. 在 Amazon Quick Desktop 中上传文件并输入指令：
+
+> 根据附件创建用户
+> Quick 账户名称：example
+> SSO 域名：sso.example.com
+> 管理员邮箱：admin@example.com
+
+3. 之后自动完成以下全部流程：
+   - 解析用户清单，智能识别字段
+   - 按邮箱查重，已存在的用户自动跳过
+   - 创建用户，生成随机临时密码
+   - 根据角色分配到对应 Keycloak 组
+   - 逐人发送包含登录引导的邀请邮件
