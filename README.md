@@ -16,10 +16,10 @@
 
 ### 1. 部署 Keycloak 基础设施
 
-通过 CloudFormation 模板一键部署 Keycloak 运行环境，包括 EC2、ALB、PostgreSQL、IAM Roles、Lambda 等。
+通过 [`template.yaml`](template.yaml) CloudFormation 模版部署 Keycloak 运行环境。
 
-  - [ ] 填写 Keycloak 域名（KEYCLOAK_DOMAIN），如 `sso.example.com`，以及临时管理员用户名和密码
-  - [ ] 部署过程中在 ACM 控制台完成证书 DNS 验证
+- [ ] 填写 Keycloak 域名（KEYCLOAK_DOMAIN），如 `sso.example.com`，以及临时管理员用户名和密码
+- [ ] 部署过程中在 ACM 控制台完成证书 DNS 验证
 - [ ] 配置 DNS 解析，将域名 CNAME 指向 ALB DNS Name
 - [ ] 等待部署完成，确认 Keycloak 可访问：`https://<KEYCLOAK_DOMAIN>`
 
@@ -200,8 +200,8 @@ carol@example.com,读者专业版
 > 管理员邮箱：admin@example.com
 
 3. 之后自动完成以下全部流程：
-   - 解析用户清单，智能识别字段
-   - 按邮箱查重，已存在的用户自动跳过
-   - 创建用户，生成随机临时密码
-   - 根据角色分配到对应 Keycloak 组
-   - 逐人发送包含登录引导的邀请邮件
+- 解析用户清单，智能识别字段
+- 按邮箱查重，已存在的用户自动跳过
+- 创建用户，生成随机临时密码
+- 根据角色分配到对应 Keycloak 组
+- 逐人发送包含登录引导的邀请邮件
