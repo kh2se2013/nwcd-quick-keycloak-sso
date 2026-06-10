@@ -37,7 +37,7 @@
 
 运行脚本一次性配置好 Realm、Client、Roles、Groups、用户等，不用手动逐个创建。
 
-- [ ] SSH 登录 EC2，进入 `/opt/keycloak/bootstrap/`
+- [ ] SSH 登录 EC2，进入 `/opt/quick-sso-keycloak/bootstrap/`
 - [ ] 编辑 `.env`，填写：
   - Keycloak 管理员凭据（步骤 2 创建的正式管理员的用户名和密码）
   - Quick 管理员信息（Quick 初始用户的用户名和邮箱）

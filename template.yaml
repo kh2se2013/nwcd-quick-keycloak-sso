@@ -186,8 +186,8 @@ Resources:
 
           # Clone repository
           dnf install -y git
-          git clone https://github.com/kh2se2013/quick-keycloak-sso.git /opt/keycloak
-          cd /opt/keycloak/docker
+          git clone https://github.com/kh2se2013/quick-sso-keycloak.git /opt/quick-sso-keycloak
+          cd /opt/quick-sso-keycloak/docker
 
           # Create .env from parameters
           cat > .env << EOF
@@ -206,7 +206,7 @@ Resources:
           docker compose -f compose.keycloak.yaml up -d
 
           # Create bootstrap .env
-          cd /opt/keycloak/bootstrap
+          cd /opt/quick-sso-keycloak/bootstrap
           cat > .env << EOF
           # Keycloak 连接
           KEYCLOAK_SERVER_URL=http://localhost:8080
@@ -483,7 +483,7 @@ Outputs:
     Value: !Sub "https://${KeycloakDomain}"
 
   Step30Bootstrap:
-    Description: "Configure Keycloak - Edit .env and run bootstrap.sh in /opt/keycloak/bootstrap/"
+    Description: "Configure Keycloak - Edit .env and run bootstrap.sh in /opt/quick-sso-keycloak/bootstrap/"
     Value: !Sub "ssh ec2-user@${EC2Instance.PublicIp}"
 
   Step40SAMLProvider:
