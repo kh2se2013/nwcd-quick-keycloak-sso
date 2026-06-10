@@ -1,0 +1,48 @@
+name: keycloak
+
+services:
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    restart: unless-stopped
+    command:
+      - start
+    ports:
+      - "8080:8080"
+      - "7800:7800"
+      - "57800:57800"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: ${KC_DB_URL_HOST}
+      KC_DB_URL_PORT: 5432
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_DB_URL_DATABASE: ${POSTGRES_DB}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HEALTH_ENABLED: true
+      KC_HTTP_MANAGEMENT_HEALTH_ENABLED: false
+      KC_CACHE: ispn
+      KC_CACHE_STACK: jdbc-ping
+      JAVA_OPTS_APPEND: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=40"
+      TZ: Asia/Shanghai
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 2816m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "{ printf 'HEAD /health/ready HTTP/1.0\r\n\r\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/localhost/8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
