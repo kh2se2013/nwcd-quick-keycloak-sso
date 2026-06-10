@@ -4,7 +4,7 @@
 
 ## 一、部署指南
 
-### 0. 前置准备
+### 前置准备
 
 开通 Amazon Quick 账户，选择支持 SSO 的身份验证方法。
 
@@ -14,7 +14,7 @@
   - [ ] 选择默认区域 `US East (N. Virginia)`
   - [ ] 选择身份验证方法：`密码或单点登录（推荐）`
 
-### 1. 部署 Keycloak 基础设施
+### 部署 Keycloak 基础设施
 
 通过 [`template.yaml`](template.yaml) CloudFormation 模版部署 Keycloak 运行环境。
 
@@ -23,7 +23,7 @@
 - [ ] 配置 DNS 解析，将域名 CNAME 指向 ALB DNS Name
 - [ ] 等待部署完成，确认 Keycloak 可访问：`https://<KEYCLOAK_DOMAIN>`
 
-### 2. 配置 Keycloak 管理员
+### 配置 Keycloak 管理员
 
 将模板部署时创建的临时管理员，替换为正式管理员。
 
@@ -31,7 +31,7 @@
 - [ ] 创建正式管理员账户，设置用户名、邮箱、密码，分配 admin 角色
 - [ ] 使用正式管理员登录，禁用或删除临时管理员
 
-### 3. 运行 Bootstrap
+### 运行 Bootstrap
 
 运行脚本一次性配置好 Realm、Client、Roles、Groups、用户等，不用手动逐个创建。
 
@@ -44,7 +44,7 @@
 - [ ] 运行 `./bootstrap.sh`
 - [ ] 确认脚本输出无报错
 
-### 4. 配置 AWS IAM
+### 配置 AWS IAM
 
 创建 SAML Identity Provider，建立 AWS 与 Keycloak 之间的信任关系。
 
@@ -53,7 +53,7 @@
   - 名称：`keycloak`（与模板中 IAM Role 信任策略一致）
   - 上传 Metadata XML 文件
 
-### 5. 配置 Amazon Quick SSO
+### 配置 Amazon Quick SSO
 
 在 Quick 管理控制台启用 SAML 单点登录，将 Keycloak 作为身份提供商。
 
@@ -62,7 +62,7 @@
 - [ ] 开启服务提供商启动的 SSO
 - [ ] 开启联合身份用户的电子邮件同步
 
-### 6. 配置 Quick Desktop 扩展访问
+### 配置 Quick Desktop 扩展访问
 
 通过 OIDC 协议为 Quick Desktop 客户端提供 SSO 登录能力。
 
@@ -74,55 +74,57 @@
   - Client ID：`amazon-quick-desktop`
 - [ ] 添加扩展
 
----
+## 二、管理员须知
 
-## 二、登录方式
+部署完成后的日常运维规范，包括 Keycloak 用户管理、AWS 账户维护、Quick 用户管理等操作要求。详见 [管理员须知](admin-guide.md)。
 
-### 1. Web 端
+## 三、用户须知
+
+### 登录方式
+
+#### Web 端
 
 Quick 中的用户名就是 IAM 联合用户名称，格式为 `角色名/邮箱`，如 `QuickAdminProRole/admin@example.com`。
 
-#### 1.1 IAM 用户（Quick 初始用户）
+**IAM 用户（Quick 初始用户）**
 
 使用 AWS 用户名和密码登录：
 
 `https://quicksight.aws.amazon.com/sn/account/<QUICK_ACCOUNT_NAME>/start?enable-sso=0`
 
-#### 1.2 Keycloak 用户
+**Keycloak 用户**
 
 使用 Keycloak 用户名和密码登录（SSO）：
 
 `https://quicksight.aws.amazon.com/sn/account/<QUICK_ACCOUNT_NAME>/start`
 
-#### 1.3 Keycloak 用户中心
+**Keycloak 用户中心**
 
 用户可自行管理个人信息、修改密码、查看登录设备：
 
 `https://<KEYCLOAK_DOMAIN>/realms/quick/account`
 
-### 2. Desktop 端
+#### Desktop 端
 
 通过邮件地址识别，对应 Quick 用户管理中的电子邮件，如 `admin@example.com`。
 
-#### 2.1 IAM 用户（Quick 初始用户）
+**IAM 用户（Quick 初始用户）**
 
 先使用 AWS 用户名和密码登录 Web 端，再使用 Keycloak 用户名和密码登录（SSO）：
 
 - Bootstrap 脚本已自动创建一个和 Quick 初始用户相同的 Keycloak 用户（密码独立）
 - 该用户不能加入 Keycloak 中任何 quick-* 组，否则会在 Quick 中额外创建一个 IAM 联合身份用户
 
-#### 2.2 Keycloak 用户
+**Keycloak 用户**
 
 使用 Keycloak 用户名和密码登录（SSO）：
 
 - 如果用户从未登录过 Quick（包括 Web 端），首次 SSO 登录会自动创建用户并停留在 Web 端
 - 再次点击 Desktop 的 SSO 登录及后续登录，跳转正常
 
----
+## 四、常用操作
 
-## 三、常用操作
-
-### 1.【管理员】批量创建用户
+### 【管理员】批量创建用户
 
 通过导入 `keycloak-user-create` Skill，上传用户清单即可自动完成创建用户、分配角色、发送邀请邮件。
 
