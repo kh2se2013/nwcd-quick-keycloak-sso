@@ -1,6 +1,7 @@
 # Amazon Quick SSO with Keycloak
 
 基于 Keycloak 为 Amazon Quick 提供 SAML / OIDC 单点登录。
+</br>
 <img width="416" height="270" alt="image" src="https://github.com/user-attachments/assets/048836f0-e37c-4f8f-9fd6-d722ef9a72e4" />
 
 ## 一、部署指南
