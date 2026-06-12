@@ -97,8 +97,6 @@ try:
         "attributes": {
             "saml_idp_initiated_sso_url_name": "aws",
             "saml_idp_initiated_sso_relay_state": f"https://quicksight.aws.amazon.com/sn/account/{QUICK_ACCOUNT_NAME}/start",
-            "saml_name_id_format": "email",
-            "saml_force_name_id_format": "true",
             "saml.assertion.signature": "true",
         },
         "fullScopeAllowed": False,
@@ -169,7 +167,7 @@ else:
             "config": {
                 "attribute.name": "https://aws.amazon.com/SAML/Attributes/RoleSessionName",
                 "attribute.nameformat": "URI Reference",
-                "user.attribute": "email",
+                "user.attribute": "username",
             }
         },
         {

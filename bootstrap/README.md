@@ -46,10 +46,8 @@
    - IDP Initiated SSO Relay State: `https://quicksight.aws.amazon.com/sn/account/{QUICK_ACCOUNT_NAME}/start`
    - Master SAML Processing URL: `https://signin.aws.amazon.com/saml`
 8. 点击 **Save**
-9. 进入 Settings，修改以下非默认值:
-   - SAML capabilities → Name ID Format: 改为 **email**（默认 username）
-   - SAML capabilities → Force Name ID Format: 改为 **On**（默认 Off）
-   - Signature and Encryption → Sign Assertions: 改为 **On**（默认 Off）
+9. 进入 Settings，修改以下非默认值：
+   - Signature and Encryption → Sign Assertions：改为 **On**（默认 Off）
 10. 保存
 11. 进入 **Client scopes** 标签 → 点击 `urn:amazon:webservices-dedicated` → **Scope** 标签 → 关闭 **Full Scope Allowed**
 
@@ -84,7 +82,7 @@
 - Name: `RoleSessionName`
 - SAML Attribute Name: `https://aws.amazon.com/SAML/Attributes/RoleSessionName`
 - SAML Attribute NameFormat: **URI Reference**
-- Property: `email`
+- Property: `username`
 
 #### Mapper 3：SessionDuration
 - Mapper type: **Hardcoded attribute**
