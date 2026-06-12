@@ -186,7 +186,7 @@ Resources:
 
           # Clone repository
           dnf install -y git
-          git clone https://github.com/kh2se2013/quick-sso-keycloak.git /opt/quick-sso-keycloak
+          git clone --depth 1 https://github.com/kh2se2013/quick-sso-keycloak.git /opt/quick-sso-keycloak
           cd /opt/quick-sso-keycloak/docker
 
           # Create .env from parameters
@@ -210,8 +210,8 @@ Resources:
           cat > .env << EOF
           # Keycloak 连接
           KEYCLOAK_SERVER_URL=http://localhost:8080
-          KEYCLOAK_MASTER_ADMIN_USERNAME=
-          KEYCLOAK_MASTER_ADMIN_PASSWORD=
+          KEYCLOAK_MASTER_ADMIN_USERNAME=${KeycloakAdminUsername}
+          KEYCLOAK_MASTER_ADMIN_PASSWORD=${KeycloakAdminPassword}
 
           # Realm（默认 quick）
           KEYCLOAK_QUICK_REALM=quick
@@ -409,8 +409,8 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - quicksight:UpdateUser
                   - quicksight:DescribeUser
+                  - quicksight:UpdateUser
                 Resource: !Sub arn:aws:quicksight:*:${AWS::AccountId}:user/default/*
 
   QuickSubscriptionAssignFunction:
@@ -444,19 +444,25 @@ Resources:
             if not username or ":" not in username:
                 return
 
-            role_part, email = username.split(":", 1)
+            role_part, session_name = username.split(":", 1)
             if role_part not in ROLE_SUBSCRIPTION_MAP:
                 return
 
             target_role = ROLE_SUBSCRIPTION_MAP[role_part]
-            qs_username = f"{role_part}/{email}"
+            qs_username = f"{role_part}/{session_name}"
+
+            user = quick.describe_user(
+                AwsAccountId=account_id,
+                Namespace="default",
+                UserName=qs_username,
+            )["User"]
 
             quick.update_user(
                 AwsAccountId=account_id,
                 Namespace="default",
                 UserName=qs_username,
                 Role=target_role,
-                Email=email,
+                Email=user["Email"],
             )
       Events:
         QuickCreateUser:
