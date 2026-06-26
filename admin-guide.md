@@ -21,15 +21,12 @@ Quick 使用邮箱作为用户唯一标识，未验证的邮箱会导致 SAML �
 | `quick-admin-pro` | Admin Pro | Quick Enterprise |
 | `quick-author-pro` | Author Pro | Quick Enterprise |
 | `quick-reader-pro` | Reader Pro | Quick Professional |
-| `quick-admin` | Admin | Quick Sight Author |
-| `quick-author` | Author | Quick Sight Author |
-| `quick-reader` | Reader | Quick Sight Reader |
 
 ### 🔴 MUST NOT
 
 #### 修改 SSO 相关 Client 配置
 
-`urn:amazon:webservices` 和 `amazon-quick-client` 的 Client ID、Role、Mappers、Scope、签名设置等均与 AWS 联动，任何改动都可能导致 SSO 中断。
+`urn:amazon:webservices` 和 `amazon-quick-desktop` 的 Client ID、Role、Mappers、Scope、签名设置等均与 AWS 联动，任何改动都可能导致 SSO 中断。
 
 #### 修改 Realm 名称
 

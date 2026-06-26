@@ -216,14 +216,6 @@ Resources:
           # Realm（默认 quick）
           KEYCLOAK_QUICK_REALM=quick
 
-          # Quick 管理员用户
-          KEYCLOAK_QUICK_ADMIN_USERNAME=
-          KEYCLOAK_QUICK_ADMIN_PASSWORD=
-          KEYCLOAK_QUICK_ADMIN_EMAIL=
-
-          # Amazon Quick 账户名称
-          QUICK_ACCOUNT_NAME=
-
           # AWS 账户
           AWS_ACCOUNT_ID=${AWS::AccountId}
 
@@ -288,85 +280,6 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: QuickReaderProRole
-      MaxSessionDuration: 43200
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
-            Action:
-              - sts:AssumeRoleWithSAML
-              - sts:TagSession
-            Condition:
-              StringEquals:
-                SAML:aud: https://signin.aws.amazon.com/saml
-      Policies:
-        - PolicyName: QuickFederatedAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: quicksight:CreateReader
-                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
-
-  # IAM Roles - Standard
-  QuickAdminRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: QuickAdminRole
-      MaxSessionDuration: 43200
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
-            Action:
-              - sts:AssumeRoleWithSAML
-              - sts:TagSession
-            Condition:
-              StringEquals:
-                SAML:aud: https://signin.aws.amazon.com/saml
-      Policies:
-        - PolicyName: QuickFederatedAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: quicksight:CreateAdmin
-                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
-
-  QuickAuthorRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: QuickAuthorRole
-      MaxSessionDuration: 43200
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !Sub arn:aws:iam::${AWS::AccountId}:saml-provider/keycloak
-            Action:
-              - sts:AssumeRoleWithSAML
-              - sts:TagSession
-            Condition:
-              StringEquals:
-                SAML:aud: https://signin.aws.amazon.com/saml
-      Policies:
-        - PolicyName: QuickFederatedAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: quicksight:CreateUser
-                Resource: !Sub arn:aws:quicksight::${AWS::AccountId}:user/${!aws:userid}
-
-  QuickReaderRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: QuickReaderRole
       MaxSessionDuration: 43200
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
