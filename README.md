@@ -86,8 +86,6 @@
 
 #### 1.1 Web 端
 
-Quick 中的用户名就是 IAM 联合用户名称，格式为 `角色名/邮箱`，如 `QuickAdminProRole/admin@example.com`。
-
 **IAM 用户（Quick 初始用户）**
 
 使用 AWS 用户名和密码登录：
@@ -107,8 +105,6 @@ Quick 中的用户名就是 IAM 联合用户名称，格式为 `角色名/邮箱
 `https://<KEYCLOAK_DOMAIN>/realms/quick/account`
 
 #### 1.2 Desktop 端
-
-通过邮件地址识别，对应 Quick 用户管理中的电子邮件，如 `admin@example.com`。
 
 **IAM 用户（Quick 初始用户）**
 

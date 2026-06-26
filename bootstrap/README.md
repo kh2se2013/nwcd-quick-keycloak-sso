@@ -1,6 +1,6 @@
 # Amazon Quick + Keycloak SSO 控制台配置步骤
 
-## 步骤 1/11：创建 Realm
+## 1. 创建 Realm
 
 1. 登录 Keycloak 管理台：`https://sso.example.com`
 2. 左上角 Realm 下拉 → **Create realm**
@@ -12,27 +12,7 @@
 
 验证：访问 `https://sso.example.com/realms/quick/account`，页面标题应显示 "Sign in to Amazon Quick"
 
-## 步骤 2/11：创建管理员用户
-
-1. 确认当前在 `quick` Realm
-2. 左侧菜单 → **Users** → **Add user**
-3. 填写：
-   - Email verified: On
-   - Username: `admin`
-   - Email: `admin@example.com`
-   - First name: （填写）
-   - Last name: （填写）
-4. 点击 **Create**
-5. 进入 **Credentials** 标签 → **Set password**
-   - 设置密码
-   - Temporary: **Off**
-6. 点击 **Save**
-
-> 如果未填写姓名，用户首次登录时 Keycloak 会要求补充。
-
-验证：访问 `https://sso.example.com/realms/quick/account`，使用该用户登录
-
-## 步骤 3/11：创建 SAML Client
+## 2. 创建 SAML Client
 
 1. 确认当前在 `quick` Realm
 2. 左侧菜单 → **Clients** → **Create client**
@@ -43,30 +23,24 @@
 7. 填写 Login settings:
    - Valid Redirect URIs: `https://signin.aws.amazon.com/saml`
    - IDP-Initiated SSO URL name: `aws`
-   - IDP Initiated SSO Relay State: `https://quicksight.aws.amazon.com/sn/account/{QUICK_ACCOUNT_NAME}/start`
    - Master SAML Processing URL: `https://signin.aws.amazon.com/saml`
 8. 点击 **Save**
-9. 进入 Settings，修改以下非默认值:
-   - SAML capabilities → Name ID Format: 改为 **email**（默认 username）
-   - SAML capabilities → Force Name ID Format: 改为 **On**（默认 Off）
-   - Signature and Encryption → Sign Assertions: 改为 **On**（默认 Off）
+9. 进入 Settings，修改以下非默认值：
+   - Signature and Encryption → Sign Assertions：改为 **On**（默认 Off）
 10. 保存
 11. 进入 **Client scopes** 标签 → 点击 `urn:amazon:webservices-dedicated` → **Scope** 标签 → 关闭 **Full Scope Allowed**
 
-## 步骤 4/11：配置 Client Roles 和 Mappers
+## 3. 配置 Client Roles 和 Mappers
 
-### 4.1 创建 Client Roles
+### 3.1. 创建 Client Roles
 
 1. 进入 Client `urn:amazon:webservices` → **Roles** 标签 → **Create role**
-2. 创建 6 个角色，Name 分别为：
+2. 创建 3 个角色，Name 分别为：
    - `arn:aws:iam::123456789012:role/QuickAdminProRole,arn:aws:iam::123456789012:saml-provider/keycloak`
    - `arn:aws:iam::123456789012:role/QuickAuthorProRole,arn:aws:iam::123456789012:saml-provider/keycloak`
    - `arn:aws:iam::123456789012:role/QuickReaderProRole,arn:aws:iam::123456789012:saml-provider/keycloak`
-   - `arn:aws:iam::123456789012:role/QuickAdminRole,arn:aws:iam::123456789012:saml-provider/keycloak`
-   - `arn:aws:iam::123456789012:role/QuickAuthorRole,arn:aws:iam::123456789012:saml-provider/keycloak`
-   - `arn:aws:iam::123456789012:role/QuickReaderRole,arn:aws:iam::123456789012:saml-provider/keycloak`
 
-### 4.2 创建 Mappers
+### 3.2. 创建 Mappers
 
 1. 进入 Client `urn:amazon:webservices` → **Client scopes** 标签
 2. 点击 `urn:amazon:webservices-dedicated`
@@ -84,7 +58,7 @@
 - Name: `RoleSessionName`
 - SAML Attribute Name: `https://aws.amazon.com/SAML/Attributes/RoleSessionName`
 - SAML Attribute NameFormat: **URI Reference**
-- Property: `email`
+- Property: `username`
 
 #### Mapper 3：SessionDuration
 - Mapper type: **Hardcoded attribute**
@@ -100,26 +74,20 @@
 - SAML Attribute NameFormat: **URI Reference**
 - Property: `email`
 
-## 步骤 5/11：创建 Groups 并绑定 Client Roles
+## 4. 创建 Groups 并绑定 Client Roles
 
 1. 左侧菜单 → **Groups** → **Create group**
-2. 创建 6 个 Group：
+2. 创建 3 个 Group：
    - `quick-admin-pro`
    - `quick-author-pro`
    - `quick-reader-pro`
-   - `quick-admin`
-   - `quick-author`
-   - `quick-reader`
 3. 进入每个 Group → **Role mapping** → **Assign role**：
    - 点击 **Filter by clients** → 选择 `urn:amazon:webservices`
    - `quick-admin-pro` → 绑定 Admin Pro 的 Client Role
    - `quick-author-pro` → 绑定 Author Pro 的 Client Role
    - `quick-reader-pro` → 绑定 Reader Pro 的 Client Role
-   - `quick-admin` → 绑定 Admin 的 Client Role
-   - `quick-author` → 绑定 Author 的 Client Role
-   - `quick-reader` → 绑定 Reader 的 Client Role
 
-## 步骤 6/11：创建 IAM SAML 身份提供商
+## 5. 创建 IAM SAML 身份提供商
 
 1. 下载 Keycloak SAML Metadata XML：`https://sso.example.com/realms/quick/protocol/saml/descriptor`
 2. AWS 控制台 → **IAM** → **身份提供商** → **添加提供商**
@@ -128,18 +96,15 @@
 5. 上传 Metadata XML 文件
 6. 点击 **添加提供商**
 
-## 步骤 7/11：创建 IAM 角色
+## 6. 创建 IAM 角色
 
-对以下 6 个角色分别执行：
+对以下 3 个角色分别执行：
 
 | 角色名 | 权限 Action |
 |--------|------------|
 | `QuickAdminProRole` | `quicksight:CreateAdmin` |
 | `QuickAuthorProRole` | `quicksight:CreateUser` |
 | `QuickReaderProRole` | `quicksight:CreateReader` |
-| `QuickAdminRole` | `quicksight:CreateAdmin` |
-| `QuickAuthorRole` | `quicksight:CreateUser` |
-| `QuickReaderRole` | `quicksight:CreateReader` |
 
 每个角色的创建步骤：
 
@@ -202,7 +167,7 @@
 
 编辑角色 → 最大会话持续时间：改为 **43200 秒**（12 小时）
 
-## 步骤 8/11：在 Amazon Quick 开启 SSO
+## 7. 在 Amazon Quick 开启 SSO
 
 1. 登录 Amazon Quick 管理页面
 2. 管理账户 → **SSO**
@@ -215,7 +180,7 @@
 
 验证：使用页面底部的测试 URL，在无痕浏览器中打开测试 SSO 登录
 
-## 步骤 9/11：测试 Web SSO
+## 8. 测试 Web SSO
 
 ### IdP-Initiated SSO
 
@@ -244,9 +209,9 @@
 3. 跳转到 AWS 登录页，使用 AWS 用户名和密码登录
 4. 登录后验证进入 Quick
 
-## 步骤 10/11：配置 Quick 桌面客户端 SSO
+## 9. 配置 Quick 桌面客户端 SSO
 
-### 9.1 创建 OIDC Client（Keycloak）
+### 9.1. 创建 OIDC Client（Keycloak）
 
 1. 确认当前在 `quick` Realm
 2. 左侧菜单 → **Clients** → **Create client**
@@ -262,12 +227,12 @@
     - Valid Redirect URIs: `http://localhost:18080`
 12. 点击 **Save**
 
-### 9.2 配置 offline_access Scope
+### 9.2. 配置 offline_access Scope
 
 1. 进入 Client `amazon-quick-desktop` → **Client scopes** 标签
 2. 找到 `offline_access`，将其从 Optional 改为 **Default**
 
-### 9.3 添加扩展访问权限（Quick 控制台）
+### 9.3. 添加扩展访问权限（Quick 控制台）
 
 1. 登录 Amazon Quick 管理控制台
 2. 权限 → **扩展访问权限** → **添加扩展访问**
@@ -288,13 +253,13 @@
 
 > 以上端点可从 Keycloak 的 well-known 地址确认：`https://sso.example.com/realms/quick/.well-known/openid-configuration`
 
-### 9.4 添加扩展（Quick 控制台）
+### 9.4. 添加扩展（Quick 控制台）
 
 1. 左侧导航 → 连接应用程序和数据 → **扩展** → **创建扩展**
 2. 选择上一步创建的桌面应用程序扩展 → 下一步
 3. 点击 **创建**
 
-### 9.5 测试
+### 9.5. 测试
 
 1. 下载并安装 Amazon Quick Desktop
 2. 登录界面选择 **Enterprise 登录**

@@ -70,9 +70,6 @@ tools: [run_python, file_read]
 | 管理员专业版 | `quick-admin-pro` | admin-pro、adminPro、Admin Pro、管理员pro |
 | 作者专业版 | `quick-author-pro` | author-pro、authorPro、Author Pro、作者pro |
 | 读者专业版 | `quick-reader-pro` | reader-pro、readerPro、Reader Pro、读者pro |
-| 管理员 | `quick-admin` | admin、Admin |
-| 作者 | `quick-author` | author、Author |
-| 读者 | `quick-reader` | reader、Reader |
 
 **角色名标准化**：无论用户清单中使用哪种格式（英文、中英混合、驼峰、短横线等），都智能匹配到对应组，并在邮件中统一显示为标准中文名（如"管理员专业版"）。
 
