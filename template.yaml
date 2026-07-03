@@ -172,11 +172,12 @@ Resources:
           #!/bin/bash
           set -e
 
-          # Install Docker
           dnf update -y
+
+          # Install Docker
           dnf install -y docker
-          systemctl enable docker
-          systemctl start docker
+          systemctl enable --now docker
+          usermod -a -G docker ec2-user
 
           # Install Docker Compose plugin
           mkdir -p /usr/local/lib/docker/cli-plugins
@@ -208,18 +209,14 @@ Resources:
           # Create bootstrap .env
           cd /opt/quick-sso-keycloak/bootstrap
           cat > .env << EOF
-          # Keycloak 连接
           KEYCLOAK_SERVER_URL=http://localhost:8080
           KEYCLOAK_MASTER_ADMIN_USERNAME=${KeycloakAdminUsername}
           KEYCLOAK_MASTER_ADMIN_PASSWORD=${KeycloakAdminPassword}
 
-          # Realm（默认 quick）
           KEYCLOAK_QUICK_REALM=quick
 
-          # AWS 账户
           AWS_ACCOUNT_ID=${AWS::AccountId}
 
-          # SAML Mapper 配置
           MAPPER_SESSION_DURATION_VALUE=43200
           EOF
 
