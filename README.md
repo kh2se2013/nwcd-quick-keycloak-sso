@@ -18,7 +18,7 @@
 
 ### 1. 部署 Keycloak 基础设施
 
-通过 [`template.yaml`](template.yaml) CloudFormation 模版部署 Keycloak 运行环境。
+通过 `template.yaml` CloudFormation 模版部署 Keycloak 运行环境。
 
 - [ ] 填写 Keycloak 域名（KEYCLOAK_DOMAIN），如 `sso.example.com`，以及临时管理员用户名和密码
 - [ ] 部署过程中在 ACM 控制台完成证书 DNS 验证
@@ -76,6 +76,14 @@
   - Client ID：`amazon-quick-desktop`
 - [ ] 添加扩展
 
+### 7. 配置 CloudTrail
+
+创建 CloudTrail Trail 后，Lambda 会通过 `CreateUser` 事件，将首次 SSO 登录创建的非 Pro 用户自动升级为 Pro。
+
+- [ ] 在 CloudTrail 控制台创建 Trail，区域选择 `US East (N. Virginia)`，Trail 名称（TRAIL_NAME）如 `management-events`，存储位置选择 `创建新的 S3 存储桶`
+- [ ] 保持 `多区域 Trail`，事件类型勾选 `管理事件`，多区域 Trail 默认包含全局服务事件，Quick 用户类事件属于全局服务事件
+- [ ] 创建后确认 Trail 状态为 `Logging`
+
 ## 二、管理员须知
 
 部署完成后的日常运维规范，包括 Keycloak 用户管理、AWS 账户维护、Quick 用户管理等操作要求。详见 [管理员须知](admin-guide.md)。
@@ -84,7 +92,7 @@
 
 ### 1. 登录方式
 
-#### 1.1 Web 端
+1.1 Web 端
 
 **IAM 用户（Quick 初始用户）**
 
@@ -104,7 +112,7 @@
 
 `https://<KEYCLOAK_DOMAIN>/realms/quick/account`
 
-#### 1.2 Desktop 端
+1.2 Desktop 端
 
 **IAM 用户（Quick 初始用户）**
 
@@ -126,7 +134,7 @@
 
 通过导入 `keycloak-user-create` Skill，上传用户清单即可自动完成创建用户、分配角色、发送邀请邮件。
 
-#### 1.1 前置条件
+1.1 前置条件
 
 在 Amazon Quick Desktop 中完成以下配置：
 
@@ -134,7 +142,7 @@
 
 Keycloak 管理 MCP Server，支持用户、组、角色、Client 等 80+ 操作。
 
-参考：https://github.com/M0-AR/keycloak-mcp-server
+参考：[https://github.com/M0-AR/keycloak-mcp-server](https://github.com/M0-AR/keycloak-mcp-server)
 
 设置 → 连接 → MCP Server → 添加：
 
@@ -150,13 +158,14 @@ Keycloak 管理 MCP Server，支持用户、组、角色、Client 等 80+ 操作
     }
   }
 }
+
 ```
 
 **mcp-email-server**
 
 IMAP / SMTP 邮件收发 MCP Server，支持收件、发件、附件等操作。
 
-参考：https://github.com/ai-zerolab/mcp-email-server
+参考：[https://github.com/ai-zerolab/mcp-email-server](https://github.com/ai-zerolab/mcp-email-server)
 
 设置 → 连接 → MCP Server → 添加：
 
@@ -173,6 +182,7 @@ IMAP / SMTP 邮件收发 MCP Server，支持收件、发件、附件等操作。
     }
   }
 }
+
 ```
 
 **keycloak-user-create Skill**
@@ -181,7 +191,7 @@ IMAP / SMTP 邮件收发 MCP Server，支持收件、发件、附件等操作。
 
 设置 → 技能 → 导入，选择本仓库 `skills/keycloak-user-create/` 文件夹。
 
-#### 1.2 操作步骤
+1.2 操作步骤
 
 1）准备用户清单，CSV 或 Excel 格式，至少包含"邮件"和"角色"两列：
 
@@ -190,6 +200,7 @@ IMAP / SMTP 邮件收发 MCP Server，支持收件、发件、附件等操作。
 alice@example.com,管理员专业版
 bob@example.com,作者专业版
 carol@example.com,读者专业版
+
 ```
 
 2）在 Amazon Quick Desktop 中上传文件并输入指令：
@@ -199,11 +210,14 @@ carol@example.com,读者专业版
 Quick 账户名称：example
 SSO 域名：sso.example.com
 管理员邮箱：admin@example.com
+
 ```
 
 3）之后自动完成以下全部流程：
+
 - 解析用户清单，智能识别字段
 - 按邮箱查重，已存在的用户自动跳过
 - 创建用户，生成随机临时密码
 - 根据角色分配到对应 Keycloak 组
 - 逐人发送包含登录引导的邀请邮件
+
