@@ -23,26 +23,21 @@
 - [ ] 配置 DNS 解析，将域名 CNAME 指向 ALB DNS Name
 - [ ] 等待部署完成，确认 Keycloak 可访问：`https://<KEYCLOAK_DOMAIN>`
 
-### 2. 配置 Keycloak 管理员
+### 2. 运行 Bootstrap
+
+运行脚本一次性配置好 Realm、Client、Roles、Groups、用户等，不用手动逐个创建。
+
+- [ ] SSH 登录 EC2，进入 `/opt/quick-sso-keycloak/bootstrap/`
+- [ ] 运行 `./bootstrap.sh`
+- [ ] 确认脚本输出无报错
+
+### 3. 配置 Keycloak 管理员
 
 将模板部署时创建的临时管理员，替换为正式管理员。
 
 - [ ] 使用临时管理员登录 Keycloak 管理控制台：`https://<KEYCLOAK_DOMAIN>`
 - [ ] 创建正式管理员账户，设置用户名、邮箱、密码，分配 admin 角色
 - [ ] 使用正式管理员登录，禁用或删除临时管理员
-
-### 3. 运行 Bootstrap
-
-运行脚本一次性配置好 Realm、Client、Roles、Groups、用户等，不用手动逐个创建。
-
-- [ ] SSH 登录 EC2，进入 `/opt/quick-sso-keycloak/bootstrap/`
-- [ ] 编辑 `.env`，填写：
-  - Keycloak 管理员凭据（步骤 2 创建的正式管理员的用户名和密码）
-  - Quick 管理员信息（Quick 初始用户的用户名和邮箱）
-  - Quick 账户名称（QUICK_ACCOUNT_NAME）
-  - AWS 账户 ID
-- [ ] 运行 `./bootstrap.sh`
-- [ ] 确认脚本输出无报错
 
 ### 4. 配置 AWS IAM
 
